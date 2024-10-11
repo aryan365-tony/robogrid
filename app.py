@@ -10,9 +10,26 @@ import io
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 
 app = Flask(__name__)
+#https://drive.google.com/file/d/1BJ2mCPcvQglxDFR8E260DiFBmVvZNY7u/view?usp=sharing
 
-# Load your pre-trained model
-model = keras.models.load_model(r'model\fresh_model.keras')
+def download_model(destination):
+    URL = f"https://drive.google.com/uc?id=1BJ2mCPcvQglxDFR8E260DiFBmVvZNY7u"
+    response = requests.get(URL)
+    if response.status_code == 200:
+        with open(destination, 'wb') as f:
+            f.write(response.content)
+    else:
+        raise Exception(f"Failed to download file from Google Drive: {response.status_code}")
+
+try:
+    model_file_id = 'YOUR_FILE_ID'  # Replace with your actual file ID
+    download_model('fresh_model.keras')
+    model = keras.models.load_model('fresh_model.keras')
+except Exception as e:
+    print(f"Error loading model: {str(e)}")
+    model = None
+
+
 vegetables = [
     "banana", "beans broad", "beans cluster", "beans haricot", "beetroot",
     "bitter guard", "bottle guard", "brinjal long", "brinjal[purple]", "cabbage",
