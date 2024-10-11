@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Camera with ML Prediction</title>
+  <style>
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh; /* Full height */
+      margin: 0; /* Remove default margin */
+      flex-direction: column; /* Stack elements vertically */
+    }
+    
+    #camera-box {
+      width: 640px; /* Increase width */
+      height: 480px; /* Increase height */
+      border: 2px solid black;
+      overflow: hidden;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      position: relative; /* Relative positioning for centering */
+    }
+    
+    video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover; /* Ensure video covers the entire box */
+      transform: scaleX(-1);
+    }
+    
+    #prediction-box {
+      margin-top: 10px;
+      text-align: center; /* Center text in prediction box */
+    }
+  </style>
+</head>
+<body>
+  <h1>Camera with ML Prediction</h1>
+  <div id="camera-box">
+    <video id="video" autoplay></video>
+  </div>
+  <div id="prediction-box">
+    <p>Prediction: <span id="prediction">N/A</span></p>
+    
+  </div>
+
+  <script>
+    const video = document.getElementById('video');
+    const predictionElem = document.getElementById('prediction');
+    const correctBtn = document.getElementById('correct-btn');
+    const incorrectBtn = document.getElementById('incorrect-btn');
+
+    // Request access to the camera
+    navigator.mediaDevices.getUserMedia({ video: true })
+      .then(stream => {
+        video.srcObject = stream;
+      })
+      .catch(err => {
+        console.error("Error accessing the camera:", err);
+      });
+
+    // Capture a frame every second and send it to the backend
+    setInterval(() => {
+      const canvas = document.createElement('canvas');
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const context = canvas.getContext('2d');
+      context.drawImage(video, 0, 0, canvas.width, canvas.height);
+      context.translate(canvas.width, 0);
+      context.scale(-1, 1);
+      context.drawImage(video, 0, 0, canvas.width, canvas.height)
+      
+      // Convert the image to base64
+      const imageData = canvas.toDataURL('image/jpeg'); // Changed to 'image/jpeg'
+
+      // Send the image to the server
+      fetch('/predict', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ image: imageData }),
+      })
+      .then(response => response.json())
+      .then(data => {
+        predictionElem.textContent = data.prediction;
+      })
+      .catch(err => console.error('Error:', err));
+    }, 1000);
+
+    // Feedback buttons
+    correctBtn.addEventListener('click', () => {
+      sendFeedback(true);
+    });
+    incorrectBtn.addEventListener('click', () => {
+      sendFeedback(false);
+    });
+
+    function sendFeedback(isCorrect) {
+      fetch('/feedback', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ isCorrect }),
+      })
+      .then(response => response.json())
+      .then(data => {
+        console.log("Feedback submitted:", data.message);
+      })
+      .catch(err => console.error('Error submitting feedback:', err));
+    }
+  </script>
+</body>
+</html>
